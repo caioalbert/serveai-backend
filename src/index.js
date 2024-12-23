@@ -96,15 +96,11 @@ const resetDatabase = async () => {
 };
 
 // Conectando ao banco de dados PostgreSQL com Sequelize
-const sequelize = new Sequelize({
-  host: process.env.PGHOST || 'localhost',
-  port: process.env.PGPORT || 5432,
-  username: process.env.PGUSER || 'postgres',
-  password: process.env.PGPASSWORD,
-  database: process.env.PGDATABASE || 'restaurant_management',
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
-  logging: false,
+  logging: false,  // Defina como true se você quiser ver os logs de SQL
 });
+
 
 const umzug = new Umzug({
   migrations: { glob: 'src/migrations/*.js' },
