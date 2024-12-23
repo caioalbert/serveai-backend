@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const http = require('node:http');
+const { sequelize } = require('./models');
 const { Sequelize } = require('sequelize');
 const { Client } = require('pg');
 const seed = require('./seeders/seed');
@@ -67,27 +68,23 @@ app.use('/api/users', usersRoutes);
 const PORT = process.env.PORT || 5000;
 
 const resetDatabase = async () => {
-  const dbName = process.env.PGDATABASE;
+  const dbUrl = process.env.DATABASE_URL;
 
-  // Conexão com o banco 'postgres' para apagar/criar outro banco
+  // Conexão com o banco de dados via URL
   const client = new Client({
-    host: process.env.PGHOST,
-    port: process.env.PGPORT || 5432,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    database: 'postgres'
+    connectionString: dbUrl,
   });
 
   try {
     await client.connect();
 
-    console.log(`Apagando banco de dados "${dbName}"...`);
-    await client.query(`DROP DATABASE IF EXISTS "${dbName}"`);
-    console.log(`Banco de dados "${dbName}" apagado.`);
+    console.log(`Apagando banco de dados "${process.env.POSTGRES_DB}"...`);
+    await client.query(`DROP DATABASE IF EXISTS "${process.env.POSTGRES_DB}"`);
+    console.log(`Banco de dados "${process.env.POSTGRES_DB}" apagado.`);
 
-    console.log(`Criando banco de dados "${dbName}"...`);
-    await client.query(`CREATE DATABASE "${dbName}"`);
-    console.log(`Banco de dados "${dbName}" criado com sucesso.`);
+    console.log(`Criando banco de dados "${process.env.POSTGRES_DB}"...`);
+    await client.query(`CREATE DATABASE "${process.env.POSTGRES_DB}"`);
+    console.log(`Banco de dados "${process.env.POSTGRES_DB}" criado com sucesso.`);
   } catch (error) {
     console.error('Erro ao resetar banco de dados:', error);
   } finally {
@@ -95,12 +92,12 @@ const resetDatabase = async () => {
   }
 };
 
-// Conectando ao banco de dados PostgreSQL com Sequelize
+// Conectando ao banco de dados PostgreSQL com Sequelize usando a URL de conexão
+// biome-ignore lint/suspicious/noRedeclare: <explanation>
 const sequelize = new Sequelize(process.env.DATABASE_URL, {
   dialect: 'postgres',
-  logging: false,  // Defina como true se você quiser ver os logs de SQL
+  logging: false, // Set to console.log to enable logging
 });
-
 
 const umzug = new Umzug({
   migrations: { glob: 'src/migrations/*.js' },
