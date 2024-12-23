@@ -67,14 +67,14 @@ app.use('/api/users', usersRoutes);
 const PORT = process.env.PORT || 5000;
 
 const resetDatabase = async () => {
-  const dbName = process.env.DB_NAME;
+  const dbName = process.env.PGDATABASE;
 
   // Conexão com o banco 'postgres' para apagar/criar outro banco
   const client = new Client({
-    host: process.env.DB_HOST,
-    port: process.env.DB_PORT || 5432,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
+    host: process.env.PGHOST,
+    port: process.env.PGPORT || 5432,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
     database: 'postgres'
   });
 
@@ -97,11 +97,11 @@ const resetDatabase = async () => {
 
 // Conectando ao banco de dados PostgreSQL com Sequelize
 const sequelize = new Sequelize({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT || 5432,
-  username: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  host: process.env.PGHOST || 'localhost',
+  port: process.env.PGPORT || 5432,
+  username: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE || 'restaurant_management',
   dialect: 'postgres',
   logging: false,
 });
