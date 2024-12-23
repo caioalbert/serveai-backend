@@ -10,7 +10,6 @@ const { Umzug, SequelizeStorage } = require('umzug');
 const jwt = require('jsonwebtoken');
 const socketIo = require('socket.io');
 
-// Carregar variáveis do arquivo .env
 dotenv.config();
 
 const app = express();
@@ -19,8 +18,8 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"],
-  },
+    methods: ["GET", "POST"]
+  }
 });
 
 app.use(cors());
@@ -69,14 +68,16 @@ app.use('/api/users', usersRoutes);
 const PORT = process.env.PORT || 5000;
 
 const resetDatabase = async () => {
-  const dbName = process.env.PGDATABASE;
+  const dbName = process.env.DB_NAME;
 
+  // Conexão com o banco 'postgres' para apagar/criar outro banco
   const client = new Client({
-    host: process.env.PGHOST,
-    port: process.env.PGPORT,
-    user: process.env.PGUSER,
-    password: process.env.PGPASSWORD,
-    database: 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    ssl: true,
+    port: process.env.DB_PORT || 5432,
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres_password',
+    database: 'postgres'
   });
 
   try {
@@ -89,6 +90,7 @@ const resetDatabase = async () => {
     console.log(`Criando banco de dados "${dbName}"...`);
     await client.query(`CREATE DATABASE "${dbName}"`);
     console.log(`Banco de dados "${dbName}" criado com sucesso.`);
+
   } catch (error) {
     console.error('Erro ao resetar banco de dados:', error);
   } finally {
@@ -111,6 +113,7 @@ server.listen(PORT, async () => {
       console.log('Resetando banco de dados completamente...');
       await resetDatabase();
 
+      // Reconecta ao Sequelize após recriar o banco
       await sequelize.sync({ force: true });
       console.log('Banco de dados recriado e sincronizado.');
     }
@@ -119,11 +122,13 @@ server.listen(PORT, async () => {
     await umzug.up();
     console.log('Migrações concluídas com sucesso.');
 
+    // Executa seed após reset do banco
     if (resetDb) {
       console.log('Executando seed após reset...');
       await seed();
       console.log('Seed concluído com sucesso após reset.');
     } else {
+      // Verifica se o seed é necessário caso não haja usuários
       const [results] = await sequelize.query('SELECT COUNT(*) AS count FROM "Users"');
       const userCount = results[0].count;
 
