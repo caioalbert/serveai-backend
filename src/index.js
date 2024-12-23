@@ -1,15 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const http = require('node:http');
-const { sequelize } = require('./models');
+const http = require('http');
 const { Sequelize } = require('sequelize');
+const { sequelize } = require('./models');
 const { Client } = require('pg');
 const seed = require('./seeders/seed');
 const { Umzug, SequelizeStorage } = require('umzug');
 const jwt = require('jsonwebtoken');
 const socketIo = require('socket.io');
 
+// Carregar variáveis do arquivo .env
 dotenv.config();
 
 const app = express();
@@ -18,8 +19,8 @@ const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
     origin: "*",
-    methods: ["GET", "POST"]
-  }
+    methods: ["GET", "POST"],
+  },
 });
 
 app.use(cors());
@@ -68,23 +69,26 @@ app.use('/api/users', usersRoutes);
 const PORT = process.env.PORT || 5000;
 
 const resetDatabase = async () => {
-  const dbUrl = process.env.DATABASE_URL;
+  const dbName = process.env.PGDATABASE;
 
-  // Conexão com o banco de dados via URL
   const client = new Client({
-    connectionString: dbUrl,
+    host: process.env.PGHOST,
+    port: process.env.PGPORT,
+    user: process.env.PGUSER,
+    password: process.env.PGPASSWORD,
+    database: 'postgres',
   });
 
   try {
     await client.connect();
 
-    console.log(`Apagando banco de dados "${process.env.POSTGRES_DB}"...`);
-    await client.query(`DROP DATABASE IF EXISTS "${process.env.POSTGRES_DB}"`);
-    console.log(`Banco de dados "${process.env.POSTGRES_DB}" apagado.`);
+    console.log(`Apagando banco de dados "${dbName}"...`);
+    await client.query(`DROP DATABASE IF EXISTS "${dbName}"`);
+    console.log(`Banco de dados "${dbName}" apagado.`);
 
-    console.log(`Criando banco de dados "${process.env.POSTGRES_DB}"...`);
-    await client.query(`CREATE DATABASE "${process.env.POSTGRES_DB}"`);
-    console.log(`Banco de dados "${process.env.POSTGRES_DB}" criado com sucesso.`);
+    console.log(`Criando banco de dados "${dbName}"...`);
+    await client.query(`CREATE DATABASE "${dbName}"`);
+    console.log(`Banco de dados "${dbName}" criado com sucesso.`);
   } catch (error) {
     console.error('Erro ao resetar banco de dados:', error);
   } finally {
@@ -92,28 +96,12 @@ const resetDatabase = async () => {
   }
 };
 
-// Conectando ao banco de dados PostgreSQL com Sequelize usando a URL de conexão
-// biome-ignore lint/suspicious/noRedeclare: <explanation>
-const sequelize = new Sequelize(process.env.DATABASE_URL, {
-  dialect: 'postgres',
-  logging: false, // Set to console.log to enable logging
-});
-
 const umzug = new Umzug({
   migrations: { glob: 'src/migrations/*.js' },
   context: sequelize.getQueryInterface(),
   storage: new SequelizeStorage({ sequelize }),
   logger: console,
 });
-
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log('Conectado ao banco de dados com sucesso!');
-  })
-  .catch((err) => {
-    console.error('Erro ao conectar ao banco de dados:', err);
-  });
 
 server.listen(PORT, async () => {
   const resetDb = process.argv.includes('--reset-db');
@@ -123,7 +111,6 @@ server.listen(PORT, async () => {
       console.log('Resetando banco de dados completamente...');
       await resetDatabase();
 
-      // Reconecta ao Sequelize após recriar o banco
       await sequelize.sync({ force: true });
       console.log('Banco de dados recriado e sincronizado.');
     }
@@ -132,13 +119,11 @@ server.listen(PORT, async () => {
     await umzug.up();
     console.log('Migrações concluídas com sucesso.');
 
-    // Executa seed após reset do banco
     if (resetDb) {
       console.log('Executando seed após reset...');
       await seed();
       console.log('Seed concluído com sucesso após reset.');
     } else {
-      // Verifica se o seed é necessário caso não haja usuários
       const [results] = await sequelize.query('SELECT COUNT(*) AS count FROM "Users"');
       const userCount = results[0].count;
 
